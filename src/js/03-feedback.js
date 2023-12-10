@@ -34,8 +34,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
-sendForm.addEventListener('click', eve => {
-  eve.preventDefault();
+sendForm.addEventListener('click', (event) => {
+  event.preventDefault();
   console.log(`Email: ${emailForm.value}`);
   console.log(`Message: ${messageForm.value}`);
   localStorage.removeItem('feedback-form-state');
