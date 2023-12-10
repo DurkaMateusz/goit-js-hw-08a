@@ -1,14 +1,14 @@
 :root {
   --timing-function: cubic-bezier(.4, 0, .2, 1);
-  --animation-duration: 250ms;
+  --animation-duration: .25s;
 }
 
 .gallery {
-  max-width: 1140px;
   grid-gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   grid-auto-rows: 240px;
   justify-content: center;
+  max-width: 1140px;
   margin-left: auto;
   margin-right: auto;
   display: grid;
@@ -24,10 +24,10 @@
 }
 
 .gallery__image {
-  height: 100%;
-  width: 100%;
   object-fit: cover;
   transition: transform var(--animation-duration) var(--timing-function);
+  width: 100%;
+  height: 100%;
 }
 
 .gallery__link {
@@ -40,6 +40,12 @@
   cursor: zoom-in;
 }
 
+/*!
+	By André Rinas, www.andrerinas.de
+	Documentation, www.simplelightbox.com
+	Available for use under the MIT License
+	Version 2.14.2
+*/
 body.hidden-scroll {
   overflow: hidden;
 }
@@ -79,9 +85,9 @@ body.hidden-scroll {
 
 .sl-wrapper .sl-close {
   z-index: 10060;
-  height: 44px;
-  width: 44px;
   color: #000;
+  width: 44px;
+  height: 44px;
   margin-top: -14px;
   margin-right: -14px;
   font-family: Arial, Baskerville, monospace;
@@ -104,10 +110,10 @@ body.hidden-scroll {
 }
 
 .sl-wrapper .sl-download {
-  width: 100%;
   text-align: center;
   z-index: 10060;
   color: #fff;
+  width: 100%;
   font-size: 1rem;
   display: none;
   position: fixed;
@@ -124,11 +130,11 @@ body.hidden-scroll {
 }
 
 .sl-wrapper .sl-navigation button {
-  height: 44px;
-  width: 22px;
   text-align: center;
   z-index: 10060;
   color: #000;
+  width: 22px;
+  height: 44px;
   margin-top: -22px;
   font-family: Arial, Baskerville, monospace;
   line-height: 44px;
@@ -147,7 +153,7 @@ body.hidden-scroll {
   left: 5px;
 }
 
-@media (min-width: 35.5em) {
+@media (width >= 35.5em) {
   .sl-wrapper .sl-navigation button {
     width: 44px;
   }
@@ -163,7 +169,7 @@ body.hidden-scroll {
   }
 }
 
-@media (min-width: 50em) {
+@media (width >= 50em) {
   .sl-wrapper .sl-navigation button {
     width: 44px;
   }
@@ -191,21 +197,21 @@ body.hidden-scroll {
 }
 
 .sl-wrapper .sl-image img {
+  border: 0;
   width: 100%;
   height: auto;
-  border: 0;
   margin: 0;
   padding: 0;
   display: block;
 }
 
-@media (min-width: 35.5em) {
+@media (width >= 35.5em) {
   .sl-wrapper .sl-image img {
     border: 0;
   }
 }
 
-@media (min-width: 50em) {
+@media (width >= 50em) {
   .sl-wrapper .sl-image img {
     border: 0;
   }
@@ -216,13 +222,13 @@ body.hidden-scroll {
   border: 0;
 }
 
-@media (min-width: 35.5em) {
+@media (width >= 35.5em) {
   .sl-wrapper .sl-image iframe {
     border: 0;
   }
 }
 
-@media (min-width: 50em) {
+@media (width >= 50em) {
   .sl-wrapper .sl-image iframe {
     border: 0;
   }
@@ -250,15 +256,15 @@ body.hidden-scroll {
 }
 
 .sl-spinner {
-  height: 40px;
   opacity: 0;
-  width: 40px;
   z-index: 1007;
   -ms-animation: pulsate 1s ease-out infinite;
   border: 5px solid #333;
   border-radius: 40px;
+  width: 40px;
+  height: 40px;
   margin: -20px 0 0 -20px;
-  animation: pulsate 1s ease-out infinite;
+  animation: 1s ease-out infinite pulsate;
   display: none;
   position: fixed;
   top: 50%;

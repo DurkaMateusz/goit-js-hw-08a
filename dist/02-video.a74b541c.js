@@ -142,15 +142,15 @@
       this[globalName] = mainExports;
     }
   }
-})({"5rKFT":[function(require,module,exports) {
-"use strict";
+})({"5KqBq":[function(require,module,exports) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
 var HMR_SECURE = false;
 var HMR_ENV_HASH = "d6ea1d42532a7575";
 module.bundle.HMR_BUNDLE_ID = "4a2b13bea74b541c";
-/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, chrome, browser, importScripts */ /*::
+"use strict";
+/* global HMR_HOST, HMR_PORT, HMR_ENV_HASH, HMR_SECURE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */ /*::
 import type {
   HMRAsset,
   HMRMessage,
@@ -158,7 +158,7 @@ import type {
 interface ParcelRequire {
   (string): mixed;
   cache: {|[string]: ParcelModule|};
-  hotData: mixed;
+  hotData: {|[string]: mixed|};
   Module: any;
   parent: ?ParcelRequire;
   isParcelRequire: true;
@@ -180,6 +180,8 @@ interface ParcelModule {
 interface ExtensionContext {
   runtime: {|
     reload(): void,
+    getURL(url: string): string;
+    getManifest(): {manifest_version: number, ...};
   |};
 }
 declare var module: {bundle: ParcelRequire, ...};
@@ -189,12 +191,16 @@ declare var HMR_ENV_HASH: string;
 declare var HMR_SECURE: boolean;
 declare var chrome: ExtensionContext;
 declare var browser: ExtensionContext;
+declare var __parcel__import__: (string) => Promise<void>;
+declare var __parcel__importScripts__: (string) => Promise<void>;
+declare var globalThis: typeof self;
+declare var ServiceWorkerGlobalScope: Object;
 */ var OVERLAY_ID = "__parcel__error__overlay__";
 var OldModule = module.bundle.Module;
 function Module(moduleName) {
     OldModule.call(this, moduleName);
     this.hot = {
-        data: module.bundle.hotData,
+        data: module.bundle.hotData[moduleName],
         _acceptCallbacks: [],
         _disposeCallbacks: [],
         accept: function(fn) {
@@ -204,55 +210,78 @@ function Module(moduleName) {
             this._disposeCallbacks.push(fn);
         }
     };
-    module.bundle.hotData = undefined;
+    module.bundle.hotData[moduleName] = undefined;
 }
 module.bundle.Module = Module;
-var checkedAssets, acceptedAssets, assetsToAccept /*: Array<[ParcelRequire, string]> */ ;
+module.bundle.hotData = {};
+var checkedAssets /*: {|[string]: boolean|} */ , assetsToDispose /*: Array<[ParcelRequire, string]> */ , assetsToAccept /*: Array<[ParcelRequire, string]> */ ;
 function getHostname() {
     return HMR_HOST || (location.protocol.indexOf("http") === 0 ? location.hostname : "localhost");
 }
 function getPort() {
     return HMR_PORT || location.port;
-} // eslint-disable-next-line no-redeclare
+}
+// eslint-disable-next-line no-redeclare
 var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
     var hostname = getHostname();
     var port = getPort();
     var protocol = HMR_SECURE || location.protocol == "https:" && !/localhost|127.0.0.1|0.0.0.0/.test(hostname) ? "wss" : "ws";
-    var ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/"); // Safari doesn't support sourceURL in error stacks.
+    var ws;
+    try {
+        ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/");
+    } catch (err) {
+        if (err.message) console.error(err.message);
+        ws = {};
+    }
+    // Web extension context
+    var extCtx = typeof browser === "undefined" ? typeof chrome === "undefined" ? null : chrome : browser;
+    // Safari doesn't support sourceURL in error stacks.
     // eval may also be disabled via CSP, so do a quick check.
     var supportsSourceURL = false;
     try {
         (0, eval)('throw new Error("test"); //# sourceURL=test.js');
     } catch (err) {
         supportsSourceURL = err.stack.includes("test.js");
-    } // $FlowFixMe
-    ws.onmessage = async function(event) {
+    }
+    // $FlowFixMe
+    ws.onmessage = async function(event /*: {data: string, ...} */ ) {
         checkedAssets = {} /*: {|[string]: boolean|} */ ;
-        acceptedAssets = {} /*: {|[string]: boolean|} */ ;
         assetsToAccept = [];
-        var data = JSON.parse(event.data);
+        assetsToDispose = [];
+        var data /*: HMRMessage */  = JSON.parse(event.data);
         if (data.type === "update") {
             // Remove error overlay if there is one
             if (typeof document !== "undefined") removeErrorOverlay();
-            let assets = data.assets.filter((asset)=>asset.envHash === HMR_ENV_HASH); // Handle HMR Update
+            let assets = data.assets.filter((asset)=>asset.envHash === HMR_ENV_HASH);
+            // Handle HMR Update
             let handled = assets.every((asset)=>{
                 return asset.type === "css" || asset.type === "js" && hmrAcceptCheck(module.bundle.root, asset.id, asset.depsByBundle);
             });
             if (handled) {
-                console.clear(); // Dispatch custom event so other runtimes (e.g React Refresh) are aware.
+                console.clear();
+                // Dispatch custom event so other runtimes (e.g React Refresh) are aware.
                 if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") window.dispatchEvent(new CustomEvent("parcelhmraccept"));
                 await hmrApplyUpdates(assets);
-                for(var i = 0; i < assetsToAccept.length; i++){
-                    var id = assetsToAccept[i][1];
-                    if (!acceptedAssets[id]) hmrAcceptRun(assetsToAccept[i][0], id);
+                // Dispose all old assets.
+                let processedAssets = {} /*: {|[string]: boolean|} */ ;
+                for(let i = 0; i < assetsToDispose.length; i++){
+                    let id = assetsToDispose[i][1];
+                    if (!processedAssets[id]) {
+                        hmrDispose(assetsToDispose[i][0], id);
+                        processedAssets[id] = true;
+                    }
                 }
-            } else if ("reload" in location) location.reload();
-            else {
-                // Web extension context
-                var ext = typeof chrome === "undefined" ? typeof browser === "undefined" ? null : browser : chrome;
-                if (ext && ext.runtime && ext.runtime.reload) ext.runtime.reload();
-            }
+                // Run accept callbacks. This will also re-execute other disposed assets in topological order.
+                processedAssets = {};
+                for(let i = 0; i < assetsToAccept.length; i++){
+                    let id = assetsToAccept[i][1];
+                    if (!processedAssets[id]) {
+                        hmrAccept(assetsToAccept[i][0], id);
+                        processedAssets[id] = true;
+                    }
+                }
+            } else fullReload();
         }
         if (data.type === "error") {
             // Log parcel errors to console
@@ -263,13 +292,14 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
             if (typeof document !== "undefined") {
                 // Render the fancy html overlay
                 removeErrorOverlay();
-                var overlay = createErrorOverlay(data.diagnostics.html); // $FlowFixMe
+                var overlay = createErrorOverlay(data.diagnostics.html);
+                // $FlowFixMe
                 document.body.appendChild(overlay);
             }
         }
     };
     ws.onerror = function(e) {
-        console.error(e.message);
+        if (e.message) console.error(e.message);
     };
     ws.onclose = function() {
         console.warn("[parcel] \uD83D\uDEA8 Connection to the HMR server was lost");
@@ -295,19 +325,23 @@ ${frame.code}`;
         errorHTML += `
       <div>
         <div style="font-size: 18px; font-weight: bold; margin-top: 20px;">
-          🚨 ${diagnostic.message}
+          \u{1F6A8} ${diagnostic.message}
         </div>
         <pre>${stack}</pre>
         <div>
           ${diagnostic.hints.map((hint)=>"<div>\uD83D\uDCA1 " + hint + "</div>").join("")}
         </div>
-        ${diagnostic.documentation ? `<div>📝 <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
+        ${diagnostic.documentation ? `<div>\u{1F4DD} <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
       </div>
     `;
     }
     errorHTML += "</div>";
     overlay.innerHTML = errorHTML;
     return overlay;
+}
+function fullReload() {
+    if ("reload" in location) location.reload();
+    else if (extCtx && extCtx.runtime && extCtx.runtime.reload) extCtx.runtime.reload();
 }
 function getParents(bundle, id) /*: Array<[ParcelRequire, string]> */ {
     var modules = bundle.modules;
@@ -325,12 +359,16 @@ function getParents(bundle, id) /*: Array<[ParcelRequire, string]> */ {
     return parents;
 }
 function updateLink(link) {
+    var href = link.getAttribute("href");
+    if (!href) return;
     var newLink = link.cloneNode();
     newLink.onload = function() {
         if (link.parentNode !== null) // $FlowFixMe
         link.parentNode.removeChild(link);
     };
-    newLink.setAttribute("href", link.getAttribute("href").split("?")[0] + "?" + Date.now()); // $FlowFixMe
+    newLink.setAttribute("href", // $FlowFixMe
+    href.split("?")[0] + "?" + Date.now());
+    // $FlowFixMe
     link.parentNode.insertBefore(newLink, link.nextSibling);
 }
 var cssTimeout = null;
@@ -340,7 +378,7 @@ function reloadCSS() {
         var links = document.querySelectorAll('link[rel="stylesheet"]');
         for(var i = 0; i < links.length; i++){
             // $FlowFixMe[incompatible-type]
-            var href = links[i].getAttribute("href");
+            var href /*: string */  = links[i].getAttribute("href");
             var hostname = getHostname();
             var servedFromHMRServer = hostname === "localhost" ? new RegExp("^(https?:\\/\\/(0.0.0.0|127.0.0.1)|localhost):" + getPort()).test(href) : href.indexOf(hostname + ":" + getPort());
             var absolute = /^https?:\/\//i.test(href) && href.indexOf(location.origin) !== 0 && !servedFromHMRServer;
@@ -348,6 +386,32 @@ function reloadCSS() {
         }
         cssTimeout = null;
     }, 50);
+}
+function hmrDownload(asset) {
+    if (asset.type === "js") {
+        if (typeof document !== "undefined") {
+            let script = document.createElement("script");
+            script.src = asset.url + "?t=" + Date.now();
+            if (asset.outputFormat === "esmodule") script.type = "module";
+            return new Promise((resolve, reject)=>{
+                var _document$head;
+                script.onload = ()=>resolve(script);
+                script.onerror = reject;
+                (_document$head = document.head) === null || _document$head === void 0 || _document$head.appendChild(script);
+            });
+        } else if (typeof importScripts === "function") {
+            // Worker scripts
+            if (asset.outputFormat === "esmodule") return import(asset.url + "?t=" + Date.now());
+            else return new Promise((resolve, reject)=>{
+                try {
+                    importScripts(asset.url + "?t=" + Date.now());
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+    }
 }
 async function hmrApplyUpdates(assets) {
     global.parcelHotUpdate = Object.create(null);
@@ -361,24 +425,15 @@ async function hmrApplyUpdates(assets) {
         // This path is also taken if a CSP disallows eval.
         if (!supportsSourceURL) {
             let promises = assets.map((asset)=>{
-                if (asset.type === "js") {
-                    if (typeof document !== "undefined") {
-                        let script = document.createElement("script");
-                        script.src = asset.url;
-                        return new Promise((resolve, reject)=>{
-                            var _document$head;
-                            script.onload = ()=>resolve(script);
-                            script.onerror = reject;
-                            (_document$head = document.head) === null || _document$head === void 0 || _document$head.appendChild(script);
-                        });
-                    } else if (typeof importScripts === "function") return new Promise((resolve, reject)=>{
-                        try {
-                            importScripts(asset.url);
-                        } catch (err) {
-                            reject(err);
-                        }
-                    });
-                }
+                var _hmrDownload;
+                return (_hmrDownload = hmrDownload(asset)) === null || _hmrDownload === void 0 ? void 0 : _hmrDownload.catch((err)=>{
+                    // Web extension fix
+                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3 && typeof ServiceWorkerGlobalScope != "undefined" && global instanceof ServiceWorkerGlobalScope) {
+                        extCtx.runtime.reload();
+                        return;
+                    }
+                    throw err;
+                });
             });
             scriptsToRemove = await Promise.all(promises);
         }
@@ -395,7 +450,7 @@ async function hmrApplyUpdates(assets) {
         });
     }
 }
-function hmrApply(bundle, asset) {
+function hmrApply(bundle /*: ParcelRequire */ , asset /*:  HMRAsset */ ) {
     var modules = bundle.modules;
     if (!modules) return;
     if (asset.type === "css") reloadCSS();
@@ -415,6 +470,7 @@ function hmrApply(bundle, asset) {
             if (supportsSourceURL) // Global eval. We would use `new Function` here but browser
             // support for source maps is better with eval.
             (0, eval)(asset.output);
+            // $FlowFixMe
             let fn = global.parcelHotUpdate[asset.id];
             modules[asset.id] = [
                 fn,
@@ -423,27 +479,29 @@ function hmrApply(bundle, asset) {
         } else if (bundle.parent) hmrApply(bundle.parent, asset);
     }
 }
-function hmrDelete(bundle, id1) {
+function hmrDelete(bundle, id) {
     let modules = bundle.modules;
     if (!modules) return;
-    if (modules[id1]) {
+    if (modules[id]) {
         // Collect dependencies that will become orphaned when this module is deleted.
-        let deps = modules[id1][1];
+        let deps = modules[id][1];
         let orphans = [];
         for(let dep in deps){
             let parents = getParents(module.bundle.root, deps[dep]);
             if (parents.length === 1) orphans.push(deps[dep]);
-        } // Delete the module. This must be done before deleting dependencies in case of circular dependencies.
-        delete modules[id1];
-        delete bundle.cache[id1]; // Now delete the orphans.
+        }
+        // Delete the module. This must be done before deleting dependencies in case of circular dependencies.
+        delete modules[id];
+        delete bundle.cache[id];
+        // Now delete the orphans.
         orphans.forEach((id)=>{
             hmrDelete(module.bundle.root, id);
         });
-    } else if (bundle.parent) hmrDelete(bundle.parent, id1);
+    } else if (bundle.parent) hmrDelete(bundle.parent, id);
 }
-function hmrAcceptCheck(bundle, id, depsByBundle) {
+function hmrAcceptCheck(bundle /*: ParcelRequire */ , id /*: string */ , depsByBundle /*: ?{ [string]: { [string]: string } }*/ ) {
     if (hmrAcceptCheckOne(bundle, id, depsByBundle)) return true;
-     // Traverse parents breadth first. All possible ancestries must accept the HMR update, or we'll reload.
+    // Traverse parents breadth first. All possible ancestries must accept the HMR update, or we'll reload.
     let parents = getParents(module.bundle.root, id);
     let accepted = false;
     while(parents.length > 0){
@@ -464,7 +522,7 @@ function hmrAcceptCheck(bundle, id, depsByBundle) {
     }
     return accepted;
 }
-function hmrAcceptCheckOne(bundle, id, depsByBundle) {
+function hmrAcceptCheckOne(bundle /*: ParcelRequire */ , id /*: string */ , depsByBundle /*: ?{ [string]: { [string]: string } }*/ ) {
     var modules = bundle.modules;
     if (!modules) return;
     if (depsByBundle && !depsByBundle[bundle.HMR_BUNDLE_ID]) {
@@ -476,30 +534,44 @@ function hmrAcceptCheckOne(bundle, id, depsByBundle) {
     if (checkedAssets[id]) return true;
     checkedAssets[id] = true;
     var cached = bundle.cache[id];
-    assetsToAccept.push([
+    assetsToDispose.push([
         bundle,
         id
     ]);
-    if (!cached || cached.hot && cached.hot._acceptCallbacks.length) return true;
+    if (!cached || cached.hot && cached.hot._acceptCallbacks.length) {
+        assetsToAccept.push([
+            bundle,
+            id
+        ]);
+        return true;
+    }
 }
-function hmrAcceptRun(bundle, id) {
+function hmrDispose(bundle /*: ParcelRequire */ , id /*: string */ ) {
     var cached = bundle.cache[id];
-    bundle.hotData = {};
-    if (cached && cached.hot) cached.hot.data = bundle.hotData;
+    bundle.hotData[id] = {};
+    if (cached && cached.hot) cached.hot.data = bundle.hotData[id];
     if (cached && cached.hot && cached.hot._disposeCallbacks.length) cached.hot._disposeCallbacks.forEach(function(cb) {
-        cb(bundle.hotData);
+        cb(bundle.hotData[id]);
     });
     delete bundle.cache[id];
+}
+function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
+    // Execute the module.
     bundle(id);
-    cached = bundle.cache[id];
+    // Run the accept callbacks in the new version of the module.
+    var cached = bundle.cache[id];
     if (cached && cached.hot && cached.hot._acceptCallbacks.length) cached.hot._acceptCallbacks.forEach(function(cb) {
         var assetsToAlsoAccept = cb(function() {
             return getParents(module.bundle.root, id);
         });
-        if (assetsToAlsoAccept && assetsToAccept.length) // $FlowFixMe[method-unbinding]
-        assetsToAccept.push.apply(assetsToAccept, assetsToAlsoAccept);
+        if (assetsToAlsoAccept && assetsToAccept.length) {
+            assetsToAlsoAccept.forEach(function(a) {
+                hmrDispose(a[0], a[1]);
+            });
+            // $FlowFixMe[method-unbinding]
+            assetsToAccept.push.apply(assetsToAccept, assetsToAlsoAccept);
+        }
     });
-    acceptedAssets[id] = true;
 }
 
 },{}],"fFZ34":[function(require,module,exports) {
@@ -518,11 +590,11 @@ if (storedTime) player.setCurrentTime(storedTime).then(function(seconds) {
     error.name;
 });
 
-},{"@vimeo/player":"kmmUG","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","lodash.throttle":"bGJVT"}],"kmmUG":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+},{"@vimeo/player":"kmmUG","lodash.throttle":"bGJVT","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kmmUG":[function(require,module,exports) {
+/*! @vimeo/player v2.20.1 | (c) 2023 Vimeo | MIT License | https://github.com/vimeo/player.js */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var global = arguments[3];
-/*! @vimeo/player v2.20.1 | (c) 2023 Vimeo | MIT License | https://github.com/vimeo/player.js */ function ownKeys(object, enumerableOnly) {
+function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
     if (Object.getOwnPropertySymbols) {
         var symbols = Object.getOwnPropertySymbols(object);
@@ -560,15 +632,15 @@ function _regeneratorRuntime() {
     }
     try {
         define({}, "");
-    } catch (err1) {
+    } catch (err) {
         define = function(obj, key, value) {
             return obj[key] = value;
         };
     }
-    function wrap(innerFn, outerFn, self, tryLocsList) {
+    function wrap(innerFn, outerFn, self1, tryLocsList) {
         var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []);
         return defineProperty(generator, "_invoke", {
-            value: makeInvokeMethod(innerFn, self, context)
+            value: makeInvokeMethod(innerFn, self1, context)
         }), generator;
     }
     function tryCatch(fn, obj, arg) {
@@ -611,12 +683,12 @@ function _regeneratorRuntime() {
         function invoke(method, arg, resolve, reject) {
             var record = tryCatch(generator[method], generator, arg);
             if ("throw" !== record.type) {
-                var result = record.arg, value1 = result.value;
-                return value1 && "object" == typeof value1 && hasOwn.call(value1, "__await") ? PromiseImpl.resolve(value1.__await).then(function(value) {
+                var result = record.arg, value = result.value;
+                return value && "object" == typeof value && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function(value) {
                     invoke("next", value, resolve, reject);
                 }, function(err) {
                     invoke("throw", err, resolve, reject);
-                }) : PromiseImpl.resolve(value1).then(function(unwrapped) {
+                }) : PromiseImpl.resolve(value).then(function(unwrapped) {
                     result.value = unwrapped, resolve(result);
                 }, function(error) {
                     return invoke("throw", error, resolve, reject);
@@ -636,7 +708,7 @@ function _regeneratorRuntime() {
             }
         });
     }
-    function makeInvokeMethod(innerFn, self, context) {
+    function makeInvokeMethod(innerFn, self1, context) {
         var state = "suspendedStart";
         return function(method, arg) {
             if ("executing" === state) throw new Error("Generator is already running");
@@ -659,7 +731,7 @@ function _regeneratorRuntime() {
                     context.dispatchException(context.arg);
                 } else "return" === context.method && context.abrupt("return", context.arg);
                 state = "executing";
-                var record = tryCatch(innerFn, self, context);
+                var record = tryCatch(innerFn, self1, context);
                 if ("normal" === record.type) {
                     if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue;
                     return {
@@ -702,11 +774,11 @@ function _regeneratorRuntime() {
             if (iteratorMethod) return iteratorMethod.call(iterable);
             if ("function" == typeof iterable.next) return iterable;
             if (!isNaN(iterable.length)) {
-                var i = -1, next1 = function next() {
+                var i = -1, next = function next() {
                     for(; ++i < iterable.length;)if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next;
                     return next.value = undefined, next.done = !0, next;
                 };
-                return next1.next = next1;
+                return next.next = next;
             }
         }
         return {
@@ -736,9 +808,9 @@ function _regeneratorRuntime() {
         };
     }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function() {
         return this;
-    }), exports.AsyncIterator = AsyncIterator, exports.async = function(innerFn, outerFn, self, tryLocsList, PromiseImpl) {
+    }), exports.AsyncIterator = AsyncIterator, exports.async = function(innerFn, outerFn, self1, tryLocsList, PromiseImpl) {
         void 0 === PromiseImpl && (PromiseImpl = Promise);
-        var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl);
+        var iter = new AsyncIterator(wrap(innerFn, outerFn, self1, tryLocsList), PromiseImpl);
         return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function(result) {
             return result.done ? result.value : iter.next();
         });
@@ -748,7 +820,7 @@ function _regeneratorRuntime() {
         return "[object Generator]";
     }), exports.keys = function(val) {
         var object = Object(val), keys = [];
-        for(var key1 in object)keys.push(key1);
+        for(var key in object)keys.push(key);
         return keys.reverse(), function next() {
             for(; keys.length;){
                 var key = keys.pop();
@@ -848,9 +920,9 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
 }
 function _asyncToGenerator(fn) {
     return function() {
-        var self = this, args = arguments;
+        var self1 = this, args = arguments;
         return new Promise(function(resolve, reject) {
-            var gen = fn.apply(self, args);
+            var gen = fn.apply(self1, args);
             function _next(value) {
                 asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
             }
@@ -906,18 +978,18 @@ function _inherits(subClass, superClass) {
     });
     if (superClass) _setPrototypeOf(subClass, superClass);
 }
-function _getPrototypeOf(o1) {
+function _getPrototypeOf(o) {
     _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) {
         return o.__proto__ || Object.getPrototypeOf(o);
     };
-    return _getPrototypeOf(o1);
+    return _getPrototypeOf(o);
 }
-function _setPrototypeOf(o2, p1) {
+function _setPrototypeOf(o, p) {
     _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) {
         o.__proto__ = p;
         return o;
     };
-    return _setPrototypeOf(o2, p1);
+    return _setPrototypeOf(o, p);
 }
 function _isNativeReflectConstruct() {
     if (typeof Reflect === "undefined" || !Reflect.construct) return false;
@@ -930,7 +1002,7 @@ function _isNativeReflectConstruct() {
         return false;
     }
 }
-function _construct(Parent1, args1, Class1) {
+function _construct(Parent, args, Class) {
     if (_isNativeReflectConstruct()) _construct = Reflect.construct.bind();
     else _construct = function _construct(Parent, args, Class) {
         var a = [
@@ -947,7 +1019,7 @@ function _construct(Parent1, args1, Class1) {
 function _isNativeFunction(fn) {
     return Function.toString.call(fn).indexOf("[native code]") !== -1;
 }
-function _wrapNativeSuper(Class2) {
+function _wrapNativeSuper(Class) {
     var _cache = typeof Map === "function" ? new Map() : undefined;
     _wrapNativeSuper = function _wrapNativeSuper(Class) {
         if (Class === null || !_isNativeFunction(Class)) return Class;
@@ -969,16 +1041,16 @@ function _wrapNativeSuper(Class2) {
         });
         return _setPrototypeOf(Wrapper, Class);
     };
-    return _wrapNativeSuper(Class2);
+    return _wrapNativeSuper(Class);
 }
-function _assertThisInitialized(self) {
-    if (self === void 0) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-    return self;
+function _assertThisInitialized(self1) {
+    if (self1 === void 0) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    return self1;
 }
-function _possibleConstructorReturn(self, call) {
+function _possibleConstructorReturn(self1, call) {
     if (call && (typeof call === "object" || typeof call === "function")) return call;
     else if (call !== void 0) throw new TypeError("Derived constructors may only return object or undefined");
-    return _assertThisInitialized(self);
+    return _assertThisInitialized(self1);
 }
 function _createSuper(Derived) {
     var hasNativeReflectConstruct = _isNativeReflectConstruct();
@@ -1064,9 +1136,9 @@ function _toPropertyKey(arg) {
  * @param {object} oEmbedParameters The oEmbed parameters.
  * @return {string}
  */ function getVimeoUrl() {
-    var oEmbedParameters1 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    var id = oEmbedParameters1.id;
-    var url = oEmbedParameters1.url;
+    var oEmbedParameters = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var id = oEmbedParameters.id;
+    var url = oEmbedParameters.url;
     var idOrUrl = id || url;
     if (!idOrUrl) throw new Error("An id or url must be passed, either in an options object or as a data-vimeo-id or data-vimeo-url attribute.");
     if (isInteger(idOrUrl)) return "https://vimeo.com/".concat(idOrUrl);
@@ -1114,8 +1186,8 @@ function createCommonjsModule(fn, module) {
  * https://github.com/polygonplanet/weakmap-polyfill
  * Copyright (c) 2015-2021 polygonplanet <polygon.planet.aqua@gmail.com>
  * @license MIT
- */ (function(self) {
-    if (self.WeakMap) return;
+ */ (function(self1) {
+    if (self1.WeakMap) return;
     var hasOwnProperty = Object.prototype.hasOwnProperty;
     var hasDefine = Object.defineProperty && function() {
         try {
@@ -1133,9 +1205,9 @@ function createCommonjsModule(fn, module) {
         });
         else object[name] = value;
     };
-    self.WeakMap = function() {
+    self1.WeakMap = function() {
         // ECMA-262 23.3 WeakMap Objects
-        function WeakMap() {
+        function WeakMap1() {
             if (this === void 0) throw new TypeError("Constructor WeakMap requires 'new'");
             defineProperty(this, "_id", genId("_WeakMap"));
             // ECMA-262 23.3.1.1 WeakMap([iterable])
@@ -1143,7 +1215,7 @@ function createCommonjsModule(fn, module) {
             throw new TypeError("WeakMap iterable is not supported");
         }
         // ECMA-262 23.3.3.2 WeakMap.prototype.delete(key)
-        defineProperty(WeakMap.prototype, "delete", function(key) {
+        defineProperty(WeakMap1.prototype, "delete", function(key) {
             checkInstance(this, "delete");
             if (!isObject(key)) return false;
             var entry = key[this._id];
@@ -1154,7 +1226,7 @@ function createCommonjsModule(fn, module) {
             return false;
         });
         // ECMA-262 23.3.3.3 WeakMap.prototype.get(key)
-        defineProperty(WeakMap.prototype, "get", function(key) {
+        defineProperty(WeakMap1.prototype, "get", function(key) {
             checkInstance(this, "get");
             if (!isObject(key)) return void 0;
             var entry = key[this._id];
@@ -1162,7 +1234,7 @@ function createCommonjsModule(fn, module) {
             return void 0;
         });
         // ECMA-262 23.3.3.4 WeakMap.prototype.has(key)
-        defineProperty(WeakMap.prototype, "has", function(key) {
+        defineProperty(WeakMap1.prototype, "has", function(key) {
             checkInstance(this, "has");
             if (!isObject(key)) return false;
             var entry = key[this._id];
@@ -1170,7 +1242,7 @@ function createCommonjsModule(fn, module) {
             return false;
         });
         // ECMA-262 23.3.3.5 WeakMap.prototype.set(key, value)
-        defineProperty(WeakMap.prototype, "set", function(key, value) {
+        defineProperty(WeakMap1.prototype, "set", function(key, value) {
             checkInstance(this, "set");
             if (!isObject(key)) throw new TypeError("Invalid value used as weak map key");
             var entry = key[this._id];
@@ -1193,8 +1265,8 @@ function createCommonjsModule(fn, module) {
         function rand() {
             return Math.random().toString().substring(2);
         }
-        defineProperty(WeakMap, "_polyfill", true);
-        return WeakMap;
+        defineProperty(WeakMap1, "_polyfill", true);
+        return WeakMap1;
     }();
     function isObject(x) {
         return Object(x) === x;
@@ -1222,7 +1294,7 @@ var npo_src = createCommonjsModule(function(module) {
                     configurable: config !== false
                 });
             };
-        } catch (err2) {
+        } catch (err) {
             builtInProp = function builtInProp(obj, name, val) {
                 obj[name] = val;
                 return obj;
@@ -1231,14 +1303,14 @@ var npo_src = createCommonjsModule(function(module) {
         // Note: using a queue instead of array for efficiency
         scheduling_queue = function Queue() {
             var first, last, item;
-            function Item(fn, self) {
+            function Item(fn, self1) {
                 this.fn = fn;
-                this.self = self;
+                this.self = self1;
                 this.next = void 0;
             }
             return {
-                add: function add(fn, self) {
-                    item = new Item(fn, self);
+                add: function add(fn, self1) {
+                    item = new Item(fn, self1);
                     if (last) last.next = item;
                     else first = item;
                     last = item;
@@ -1254,8 +1326,8 @@ var npo_src = createCommonjsModule(function(module) {
                 }
             };
         }();
-        function schedule(fn, self) {
-            scheduling_queue.add(fn, self);
+        function schedule(fn, self1) {
+            scheduling_queue.add(fn, self1);
             if (!cycle) cycle = timer(scheduling_queue.drain);
         }
         // promise duck typing
@@ -1271,13 +1343,13 @@ var npo_src = createCommonjsModule(function(module) {
         // NOTE: This is a separate function to isolate
         // the `try..catch` so that other code can be
         // optimized better
-        function notifyIsolated(self, cb, chain) {
+        function notifyIsolated(self1, cb, chain) {
             var ret, _then;
             try {
-                if (cb === false) chain.reject(self.msg);
+                if (cb === false) chain.reject(self1.msg);
                 else {
-                    if (cb === true) ret = self.msg;
-                    else ret = cb.call(void 0, self.msg);
+                    if (cb === true) ret = self1.msg;
+                    else ret = cb.call(void 0, self1.msg);
                     if (ret === chain.promise) chain.reject(TypeError("Promise-chain cycle"));
                     else if (_then = isThenable(ret)) _then.call(ret, chain.resolve, chain.reject);
                     else chain.resolve(ret);
@@ -1286,65 +1358,65 @@ var npo_src = createCommonjsModule(function(module) {
                 chain.reject(err);
             }
         }
-        function resolve1(msg) {
-            var _then, self = this;
+        function resolve(msg) {
+            var _then, self1 = this;
             // already triggered?
-            if (self.triggered) return;
-            self.triggered = true;
+            if (self1.triggered) return;
+            self1.triggered = true;
             // unwrap
-            if (self.def) self = self.def;
+            if (self1.def) self1 = self1.def;
             try {
                 if (_then = isThenable(msg)) schedule(function() {
-                    var def_wrapper = new MakeDefWrapper(self);
+                    var def_wrapper = new MakeDefWrapper(self1);
                     try {
                         _then.call(msg, function $resolve$() {
-                            resolve1.apply(def_wrapper, arguments);
+                            resolve.apply(def_wrapper, arguments);
                         }, function $reject$() {
-                            reject1.apply(def_wrapper, arguments);
+                            reject.apply(def_wrapper, arguments);
                         });
                     } catch (err) {
-                        reject1.call(def_wrapper, err);
+                        reject.call(def_wrapper, err);
                     }
                 });
                 else {
-                    self.msg = msg;
-                    self.state = 1;
-                    if (self.chain.length > 0) schedule(notify, self);
+                    self1.msg = msg;
+                    self1.state = 1;
+                    if (self1.chain.length > 0) schedule(notify, self1);
                 }
             } catch (err) {
-                reject1.call(new MakeDefWrapper(self), err);
+                reject.call(new MakeDefWrapper(self1), err);
             }
         }
-        function reject1(msg) {
-            var self = this;
+        function reject(msg) {
+            var self1 = this;
             // already triggered?
-            if (self.triggered) return;
-            self.triggered = true;
+            if (self1.triggered) return;
+            self1.triggered = true;
             // unwrap
-            if (self.def) self = self.def;
-            self.msg = msg;
-            self.state = 2;
-            if (self.chain.length > 0) schedule(notify, self);
+            if (self1.def) self1 = self1.def;
+            self1.msg = msg;
+            self1.state = 2;
+            if (self1.chain.length > 0) schedule(notify, self1);
         }
         function iteratePromises(Constructor, arr, resolver, rejecter) {
-            for(var idx1 = 0; idx1 < arr.length; idx1++)(function IIFE(idx) {
+            for(var idx = 0; idx < arr.length; idx++)(function IIFE(idx) {
                 Constructor.resolve(arr[idx]).then(function $resolver$(msg) {
                     resolver(idx, msg);
                 }, rejecter);
-            })(idx1);
+            })(idx);
         }
-        function MakeDefWrapper(self) {
-            this.def = self;
+        function MakeDefWrapper(self1) {
+            this.def = self1;
             this.triggered = false;
         }
-        function MakeDef(self) {
-            this.promise = self;
+        function MakeDef(self1) {
+            this.promise = self1;
             this.state = 0;
             this.triggered = false;
             this.chain = [];
             this.msg = void 0;
         }
-        function Promise(executor) {
+        function Promise1(executor) {
             if (typeof executor != "function") throw TypeError("Not a function");
             if (this.__NPO__ !== 0) throw TypeError("Not a promise");
             // instance shadowing the inherited "brand"
@@ -1373,20 +1445,20 @@ var npo_src = createCommonjsModule(function(module) {
             };
             try {
                 executor.call(void 0, function publicResolve(msg) {
-                    resolve1.call(def, msg);
+                    resolve.call(def, msg);
                 }, function publicReject(msg) {
-                    reject1.call(def, msg);
+                    reject.call(def, msg);
                 });
             } catch (err) {
-                reject1.call(def, err);
+                reject.call(def, err);
             }
         }
-        var PromisePrototype = builtInProp({}, "constructor", Promise, /*configurable=*/ false);
+        var PromisePrototype = builtInProp({}, "constructor", Promise1, /*configurable=*/ false);
         // Note: Android 4 cannot use `Object.defineProperty(..)` here
-        Promise.prototype = PromisePrototype;
+        Promise1.prototype = PromisePrototype;
         // built-in "brand" to signal an "uninitialized" promise
         builtInProp(PromisePrototype, "__NPO__", 0, /*configurable=*/ false);
-        builtInProp(Promise, "resolve", function Promise$resolve(msg) {
+        builtInProp(Promise1, "resolve", function Promise$resolve(msg) {
             var Constructor = this;
             // spec mandated checks
             // note: best "isPromise" check that's practical for now
@@ -1396,13 +1468,13 @@ var npo_src = createCommonjsModule(function(module) {
                 resolve(msg);
             });
         });
-        builtInProp(Promise, "reject", function Promise$reject(msg) {
+        builtInProp(Promise1, "reject", function Promise$reject(msg) {
             return new this(function executor(resolve, reject) {
                 if (typeof resolve != "function" || typeof reject != "function") throw TypeError("Not a function");
                 reject(msg);
             });
         });
-        builtInProp(Promise, "all", function Promise$all(arr) {
+        builtInProp(Promise1, "all", function Promise$all(arr) {
             var Constructor = this;
             // spec mandated checks
             if (ToString.call(arr) != "[object Array]") return Constructor.reject(TypeError("Not an array"));
@@ -1416,7 +1488,7 @@ var npo_src = createCommonjsModule(function(module) {
                 }, reject);
             });
         });
-        builtInProp(Promise, "race", function Promise$race(arr) {
+        builtInProp(Promise1, "race", function Promise$race(arr) {
             var Constructor = this;
             // spec mandated checks
             if (ToString.call(arr) != "[object Array]") return Constructor.reject(TypeError("Not an array"));
@@ -1427,7 +1499,7 @@ var npo_src = createCommonjsModule(function(module) {
                 }, reject);
             });
         });
-        return Promise;
+        return Promise1;
     });
 });
 /**
@@ -1870,32 +1942,32 @@ Terms */ function initializeScreenfull() {
         fullscreenchange: fn.fullscreenchange,
         fullscreenerror: fn.fullscreenerror
     };
-    var screenfull1 = {
+    var screenfull = {
         request: function request(element) {
             return new Promise(function(resolve, reject) {
-                var onFullScreenEntered1 = function onFullScreenEntered() {
-                    screenfull1.off("fullscreenchange", onFullScreenEntered);
+                var onFullScreenEntered = function onFullScreenEntered() {
+                    screenfull.off("fullscreenchange", onFullScreenEntered);
                     resolve();
                 };
-                screenfull1.on("fullscreenchange", onFullScreenEntered1);
+                screenfull.on("fullscreenchange", onFullScreenEntered);
                 element = element || document.documentElement;
                 var returnPromise = element[fn.requestFullscreen]();
-                if (returnPromise instanceof Promise) returnPromise.then(onFullScreenEntered1).catch(reject);
+                if (returnPromise instanceof Promise) returnPromise.then(onFullScreenEntered).catch(reject);
             });
         },
         exit: function exit() {
             return new Promise(function(resolve, reject) {
-                if (!screenfull1.isFullscreen) {
+                if (!screenfull.isFullscreen) {
                     resolve();
                     return;
                 }
-                var onFullScreenExit1 = function onFullScreenExit() {
-                    screenfull1.off("fullscreenchange", onFullScreenExit);
+                var onFullScreenExit = function onFullScreenExit() {
+                    screenfull.off("fullscreenchange", onFullScreenExit);
                     resolve();
                 };
-                screenfull1.on("fullscreenchange", onFullScreenExit1);
+                screenfull.on("fullscreenchange", onFullScreenExit);
                 var returnPromise = document[fn.exitFullscreen]();
-                if (returnPromise instanceof Promise) returnPromise.then(onFullScreenExit1).catch(reject);
+                if (returnPromise instanceof Promise) returnPromise.then(onFullScreenExit).catch(reject);
             });
         },
         on: function on(event, callback) {
@@ -1907,7 +1979,7 @@ Terms */ function initializeScreenfull() {
             if (eventName) document.removeEventListener(eventName, callback);
         }
     };
-    Object.defineProperties(screenfull1, {
+    Object.defineProperties(screenfull, {
         isFullscreen: {
             get: function get() {
                 return Boolean(document[fn.fullscreenElement]);
@@ -1927,7 +1999,7 @@ Terms */ function initializeScreenfull() {
             }
         }
     });
-    return screenfull1;
+    return screenfull;
 }
 /** @typedef {import('./timing-src-connector.types').PlayerControls} PlayerControls */ /** @typedef {import('./timing-object.types').TimingObject} TimingObject */ /** @typedef {import('./timing-src-connector.types').TimingSrcConnectorOptions} TimingSrcConnectorOptions */ /** @typedef {(msg: string) => any} Logger */ /** @typedef {import('timing-object.types').TConnectionState} TConnectionState */ /**
  * @type {TimingSrcConnectorOptions}
@@ -1959,18 +2031,18 @@ Terms */ function initializeScreenfull() {
  * 4. `timingObjectUpdater` which listens to the player events of seeked, play and pause and will respond by calling `updateTimingObject()`.
  * 5. `maintainPlaybackPosition` this is code that constantly monitors the player to make sure it's always in sync with the TimingObject. This is needed because videos will generally not play with precise time accuracy and there will be some drift which becomes more noticeable over longer periods (as noted in the timing-object spec). More details on this method below.
  */ var TimingSrcConnector = /*#__PURE__*/ function(_EventTarget) {
-    _inherits(TimingSrcConnector1, _EventTarget);
-    var _super = _createSuper(TimingSrcConnector1);
+    _inherits(TimingSrcConnector, _EventTarget);
+    var _super = _createSuper(TimingSrcConnector);
     /**
    * @param {PlayerControls} player
    * @param {TimingObject} timingObject
    * @param {TimingSrcConnectorOptions} options
    * @param {Logger} logger
-   */ function TimingSrcConnector1(_player, timingObject) {
+   */ function TimingSrcConnector(_player, timingObject) {
         var _this;
         var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
         var logger = arguments.length > 3 ? arguments[3] : undefined;
-        _classCallCheck(this, TimingSrcConnector1);
+        _classCallCheck(this, TimingSrcConnector);
         _this = _super.call(this);
         _defineProperty(_assertThisInitialized(_this), "logger", void 0);
         _defineProperty(_assertThisInitialized(_this), "speedAdjustment", 0);
@@ -2017,7 +2089,7 @@ Terms */ function initializeScreenfull() {
         _this.init(timingObject, _player, _objectSpread2(_objectSpread2({}, defaultOptions), options));
         return _this;
     }
-    _createClass(TimingSrcConnector1, [
+    _createClass(TimingSrcConnector, [
         {
             key: "disconnect",
             value: function disconnect() {
@@ -2316,18 +2388,18 @@ Terms */ function initializeScreenfull() {
      * @return {Promise<void>}
      */ function waitForTOReadyState(timingObject, state) {
                 return new Promise(function(resolve) {
-                    var check1 = function check() {
+                    var check = function check() {
                         if (timingObject.readyState === state) resolve();
                         else timingObject.addEventListener("readystatechange", check, {
                             once: true
                         });
                     };
-                    check1();
+                    check();
                 });
             }
         }
     ]);
-    return TimingSrcConnector1;
+    return TimingSrcConnector;
 }(/*#__PURE__*/ _wrapNativeSuper(EventTarget));
 var playerMap = new WeakMap();
 var readyMap = new WeakMap();
@@ -2340,10 +2412,10 @@ var Player = /*#__PURE__*/ function() {
    *        player iframe, and id, or a jQuery object.
    * @param {object} [options] oEmbed parameters to use when creating an embed in the element.
    * @return {Player}
-   */ function Player1(element) {
+   */ function Player(element) {
         var _this = this;
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        _classCallCheck(this, Player1);
+        _classCallCheck(this, Player);
         /* global jQuery */ if (window.jQuery && element instanceof jQuery) {
             if (element.length > 1 && window.console && console.warn) console.warn("A jQuery object with multiple elements was passed, using the first element.");
             element = element[0];
@@ -2430,7 +2502,7 @@ var Player = /*#__PURE__*/ function() {
    * @param {string} name The API method to call.
    * @param {Object} [args={}] Arguments to send via postMessage.
    * @return {Promise}
-   */ _createClass(Player1, [
+   */ _createClass(Player, [
         {
             key: "callMethod",
             value: function callMethod(name) {
@@ -2955,7 +3027,7 @@ var Player = /*#__PURE__*/ function() {
             }()
         }
     ]);
-    return Player1;
+    return Player;
 }(); // Setup embed only if this is not a node environment
 if (!isNode) {
     screenfull = initializeScreenfull();
@@ -2979,7 +3051,7 @@ exports.defineInteropFlag = function(a) {
 };
 exports.exportAll = function(source, dest) {
     Object.keys(source).forEach(function(key) {
-        if (key === "default" || key === "__esModule" || dest.hasOwnProperty(key)) return;
+        if (key === "default" || key === "__esModule" || Object.prototype.hasOwnProperty.call(dest, key)) return;
         Object.defineProperty(dest, key, {
             enumerable: true,
             get: function() {
@@ -2997,7 +3069,6 @@ exports.export = function(dest, destName, get) {
 };
 
 },{}],"bGJVT":[function(require,module,exports) {
-var global = arguments[3];
 /**
  * lodash (Custom Build) <https://lodash.com/>
  * Build: `lodash modularize exports="npm" -o ./`
@@ -3005,7 +3076,8 @@ var global = arguments[3];
  * Released under MIT license <https://lodash.com/license>
  * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
  * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
- */ /** Used as the `TypeError` message for "Functions" methods. */ var FUNC_ERROR_TEXT = "Expected a function";
+ */ /** Used as the `TypeError` message for "Functions" methods. */ var global = arguments[3];
+var FUNC_ERROR_TEXT = "Expected a function";
 /** Used as references for various `Number` constants. */ var NAN = 0 / 0;
 /** `Object#toString` result references. */ var symbolTag = "[object Symbol]";
 /** Used to match leading and trailing whitespace. */ var reTrim = /^\s+|\s+$/g;
@@ -3095,7 +3167,7 @@ var global = arguments[3];
  * // Cancel the trailing debounced invocation.
  * jQuery(window).on('popstate', debounced.cancel);
  */ function debounce(func, wait, options) {
-    var lastArgs, lastThis, maxWait, result1, timerId, lastCallTime, lastInvokeTime = 0, leading = false, maxing = false, trailing = true;
+    var lastArgs, lastThis, maxWait, result, timerId, lastCallTime, lastInvokeTime = 0, leading = false, maxing = false, trailing = true;
     if (typeof func != "function") throw new TypeError(FUNC_ERROR_TEXT);
     wait = toNumber(wait) || 0;
     if (isObject(options)) {
@@ -3108,8 +3180,8 @@ var global = arguments[3];
         var args = lastArgs, thisArg = lastThis;
         lastArgs = lastThis = undefined;
         lastInvokeTime = time;
-        result1 = func.apply(thisArg, args);
-        return result1;
+        result = func.apply(thisArg, args);
+        return result;
     }
     function leadingEdge(time) {
         // Reset any `maxWait` timer.
@@ -3117,7 +3189,7 @@ var global = arguments[3];
         // Start the timer for the trailing edge.
         timerId = setTimeout(timerExpired, wait);
         // Invoke the leading edge.
-        return leading ? invokeFunc(time) : result1;
+        return leading ? invokeFunc(time) : result;
     }
     function remainingWait(time) {
         var timeSinceLastCall = time - lastCallTime, timeSinceLastInvoke = time - lastInvokeTime, result = wait - timeSinceLastCall;
@@ -3142,7 +3214,7 @@ var global = arguments[3];
         // debounced at least once.
         if (trailing && lastArgs) return invokeFunc(time);
         lastArgs = lastThis = undefined;
-        return result1;
+        return result;
     }
     function cancel() {
         if (timerId !== undefined) clearTimeout(timerId);
@@ -3150,7 +3222,7 @@ var global = arguments[3];
         lastArgs = lastCallTime = lastThis = timerId = undefined;
     }
     function flush() {
-        return timerId === undefined ? result1 : trailingEdge(now());
+        return timerId === undefined ? result : trailingEdge(now());
     }
     function debounced() {
         var time = now(), isInvoking = shouldInvoke(time);
@@ -3166,7 +3238,7 @@ var global = arguments[3];
             }
         }
         if (timerId === undefined) timerId = setTimeout(timerExpired, wait);
-        return result1;
+        return result;
     }
     debounced.cancel = cancel;
     debounced.flush = flush;
@@ -3337,6 +3409,6 @@ var global = arguments[3];
 }
 module.exports = throttle;
 
-},{}]},["5rKFT","fFZ34"], "fFZ34", "parcelRequired7c6")
+},{}]},["5KqBq","fFZ34"], "fFZ34", "parcelRequired7c6")
 
 //# sourceMappingURL=02-video.a74b541c.js.map

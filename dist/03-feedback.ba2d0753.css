@@ -1,9 +1,9 @@
 .feedback-form {
-  max-width: 480px;
   background-color: #fff;
   border: 1px solid #0000001f;
   border-radius: 4px;
   flex-direction: column;
+  max-width: 480px;
   padding: 12px;
   display: flex;
 }
